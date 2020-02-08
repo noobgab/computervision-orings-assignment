@@ -27,7 +27,7 @@ def get_threshold_val(img):
     return t
 
 def threshold(img):
-    thr = img[1]
+    thr = img[1].copy()
     t = get_threshold_val(img)
     for i in range(0, thr.shape[0]):
         for j in range(0, thr.shape[1]):
@@ -45,19 +45,34 @@ def read_images(loc, ext): # Finds all files of the specified extension (ext) wi
     return ret
 
 def dilation(img, struct):
-    ret = img
+    ret = img.copy()
     for i in range(0, img.shape[0]):
         for j in range(0, img.shape[1]):
             if img[i, j] == 255:
-                #print(i, j)
-                pass
+                for y in range(-1, 2):
+                    for x in range(-1, 2):
+                        new_i = i + y
+                        new_j = j + x
+                        if y != 0 and x != 0 and new_i >= 0 and new_i < img.shape[0] and new_j >= 0 and new_j < img.shape[1] and struct[y][x] == 1 and img[new_i, new_j] == 0:
+                            ret[i, j] = 0
     return ret
 
 def erosion(img, struct):
-    pass
+    ret = img.copy()
+    for i in range(0, img.shape[0]):
+        for j in range(0, img.shape[1]):
+            if img[i, j] == 0:
+                for y in range(-1, 2):
+                    for x in range(-1, 2):
+                        new_i = i + y
+                        new_j = j + x
+                        if y != 0 and x != 0 and new_i >= 0 and new_i < img.shape[0] and new_j >= 0 and new_j < img.shape[1] and struct[y][x] == 1 and img[new_i, new_j] == 255:
+                            ret[i, j] = 255
+    return ret
 
 def closing(img, struct):
     ret = dilation(img, struct)
+    ret = erosion(ret, struct)
     return ret
 
 location = './Orings' # The folder containing all the images
