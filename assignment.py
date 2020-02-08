@@ -4,7 +4,7 @@ import time
 import os
 import matplotlib.pyplot as plt
 
-def find_peak(hist):
+def find_peaks(hist):
     peaks = [np.where(hist == max(hist))[0][0]]
     p1 = peaks[0] - 50
     p2 = peaks[0] + 50
@@ -22,7 +22,7 @@ def get_hist(img):
 
 def get_threshold_val(img):
     hist = get_hist(img[1])
-    peaks = find_peak(hist)
+    peaks = find_peaks(hist)
     t = peaks[0] + int((peaks[1] - peaks[0]) / 2)
     return t
 
@@ -75,6 +75,40 @@ def closing(img, struct):
     ret = erosion(ret, struct)
     return ret
 
+def label_components(img):
+    labels = [[0 for j in range(0, img.shape[1])] for i in range(0, img.shape[0])]
+    cur_lab = 1
+    for i in range(0, img.shape[0]):
+        for j in range(0, img.shape[1]):
+            if img[i, j] == 0 and labels[i][j] == 0:
+                labels[i][j] = cur_lab
+                q = []
+                q.append([i, j])
+
+                while len(q) > 0:
+                    item = q.pop(0)
+                    if img[item[0] - 1, item[1]] == 0 and labels[item[0] - 1][item[1]] == 0:
+                        q.append([item[0] - 1, item[1]])
+                        labels[item[0] - 1][item[1]] = cur_lab
+                    if img[item[0] + 1, item[1]] == 0 and labels[item[0] + 1][item[1]] == 0:
+                        q.append([item[0] + 1, item[1]])
+                        labels[item[0] + 1][item[1]] = cur_lab
+                    if img[item[0], item[1] - 1] == 0 and labels[item[0]][item[1] - 1] == 0:
+                        q.append([item[0], item[1] - 1])
+                        labels[item[0]][item[1] - 1] = cur_lab
+                    if img[item[0], item[1] + 1] == 0 and labels[item[0]][item[1] + 1] == 0:
+                        q.append([item[0], item[1] + 1])
+                        labels[item[0]][item[1] + 1] = cur_lab
+                cur_lab += 1
+    return labels
+
+def update_labels(img, labels):
+    ret = img.copy()
+    for i in range(0, img.shape[0]):
+        for j in range(0, img.shape[1]):
+            ret[i, j] = labels[i][j] * 70
+    return ret
+
 location = './Orings' # The folder containing all the images
 file_ext = '.jpg'
 
@@ -90,6 +124,8 @@ morph_struct = [
 for img in images:
     img_thr = threshold(img)
     img_thr = closing(img_thr, morph_struct)
+    img_labels = label_components(img_thr)
+    img_thr = update_labels(img_thr, img_labels)
     cv.imshow('Thresholded: ' + img[0], img_thr)
     cv.waitKey(0)
     cv.destroyAllWindows()
