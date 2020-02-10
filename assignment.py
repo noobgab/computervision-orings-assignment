@@ -37,7 +37,7 @@ def threshold(img):
                 thr[i, j] = 0
     return thr
 
-def read_images(loc, ext): # Finds all files of the specified extension (ext) within a specified folder (loc), and returns a list of opencv objects of said files
+def read_images(loc, ext):
     ret = []
     for file in os.listdir(loc):
         if file.endswith(ext):
@@ -102,12 +102,40 @@ def label_components(img):
                 cur_lab += 1
     return labels
 
+def calc_component_area(labels, label):
+    area = 0
+    for y in range(0, len(labels)):
+        for x in range(0, len(labels[0])):
+            if labels[y][x] == label:
+                area += 1
+    return area
+
 def update_labels(img, labels):
     ret = img.copy()
     for i in range(0, img.shape[0]):
         for j in range(0, img.shape[1]):
             ret[i, j] = labels[i][j] * 70
     return ret
+
+def remove_smallest_areas(labels):
+    u = np.unique(labels)
+    if len(u) > 2:
+        u = u[1:]
+        areas = []
+        for i in range(len(u)):
+            areas.append(calc_component_area(labels, u[i]))
+        smallest_area = u[areas.index(min(areas))]
+        new_labels = []
+        for label_set in labels:
+            new_set = []
+            for item in label_set:
+                if item == smallest_area:
+                    new_set.append(0)
+                else:
+                    new_set.append(item)
+            new_labels.append(new_set)
+        return new_labels
+    return labels
 
 location = './Orings' # The folder containing all the images
 file_ext = '.jpg'
@@ -125,6 +153,7 @@ for img in images:
     img_thr = threshold(img)
     img_thr = closing(img_thr, morph_struct)
     img_labels = label_components(img_thr)
+    img_labels = remove_smallest_areas(img_labels)
     img_thr = update_labels(img_thr, img_labels)
     cv.imshow('Thresholded: ' + img[0], img_thr)
     cv.waitKey(0)
