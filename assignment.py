@@ -271,7 +271,6 @@ def get_result(img, centroid, radius): # Takes in an image, centroid coordinates
                 mask[i, j] = mask_pix # If the pixel location is within the constructed ring, mark is with the mask pixel colour
             else:
                 mask[i, j] = 0 # Otherwise remove it from the image and set it to a background colour
-    
     faulty_loc = [] # Used to keep track of all the faulty pixel coordinates 
     for i in range(0, img.shape[0]): # Loop through the y axis of the image
         for j in range(0, img.shape[1]): # Loop through the x axis of the image
@@ -292,8 +291,17 @@ def get_result(img, centroid, radius): # Takes in an image, centroid coordinates
                     faulty_loc.append([i, j]) # Add its coordinates to the faulty pixel location list (used to classify if the ring is faulty( if length is greater than 0), and to colour in the faulty area
     
     if len(faulty_loc) > 0: # If there are mroe than 0 faulty pixel locations store
-        return [False, faulty_loc] # Return false, as the O ring is faulty
-    return [True, faulty_loc] # Return true, to show that the ring passes
+        return [False, faulty_loc, mask] # Return false, as the O ring is faulty
+    return [True, faulty_loc, mask] # Return true, to show that the ring passes
+
+def paint_faulty_locations(img, expected_ring): # Takes in an image and a mask
+    colour = np.array([0, 0, 255]) # Define the colour to paint: red
+    for i in range(0, img.shape[0]): # Loop through the y axis of the image
+        for j in range(0, img.shape[1]): # Loop through the x axis of the image
+            # If a foreground pixel is detected outside the expected ring, or if a background pixel is detected inside the expected ring
+            if np.array_equal(expected_ring[i,j], np.array([255, 255, 255])) and np.array_equal(img[i, j], np.array([0, 0, 0])) or np.array_equal(expected_ring[i,j], np.array([0, 0, 0])) and np.array_equal(img[i, j], np.array([255, 255, 255])):
+                img[i, j] = colour # Paint the pixel red
+    return img
 
 # Takes in the title of the file, the actual image, labels, centroid coordinates, boinding_box coordinates, the processing time, and the totals (which hold the current count of failed and passed origns) and outputs them as an image to the screen
 def display_image(title, img, labels, centroid, bounding_box, start, totals):
@@ -307,11 +315,13 @@ def display_image(title, img, labels, centroid, bounding_box, start, totals):
     totals[2] += (end - start) # Add the processing time for the current ring to the total processing time count
 
     updated_img = cv.cvtColor(updated_img, cv.COLOR_GRAY2RGB) # Turns the image into BGR scale, allows use of colour rather than greyscale when image is displayed
+    result[2] = cv.cvtColor(result[2], cv.COLOR_GRAY2RGB)
     
     if result[0] == False: # Check if result for this O ring has come back as False (faulty) or True (passing)
         res = 'FAIL' # Set the resulting text
         colour = (0, 0, 255) # Set the colour to red
         totals[1] += 1 # Increment the False total counter
+        updated_img = paint_faulty_locations(updated_img, result[2]) # Paint in all the areas that do not match the expected circle
     else:
         res = 'PASS' # Set the resulting text
         colour = (0,255,0) # Set the colour to green
@@ -357,6 +367,6 @@ for img in images: # Loop through the list of images, and process them one by on
 # Print the processing statistics to the console
 print("=== Processing Statistics ===")
 print("Processing Time:\t{} seconds".format(totals[2]))
-print("Total Orings:\t{}".format(len(images)))
-print("Passing Orings:\t{}".format(totals[0]))
-print("Failing Orings:\t{}".format(totals[1]))
+print("Total Orings:\t\t{}".format(len(images)))
+print("Passing Orings:\t\t{}".format(totals[0]))
+print("Failing Orings:\t\t{}".format(totals[1]))
