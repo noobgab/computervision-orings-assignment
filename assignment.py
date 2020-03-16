@@ -3,6 +3,13 @@ import numpy as np
 import time
 import os
 
+# The program will look for an Orings directory in the same location as this file by default
+# The program will also read in all .jpg files in the Orings directory
+# These default parameters can be changed by altering the variables below
+
+location = './Orings' # Specify the folder that contains all the images, the program will search through it
+file_ext = '.jpg' # Specify the file type for the program to read in
+
 def read_images(loc, ext): # Imports and returns a list of all the files with the specified extension (ext) from the specified folder (loc)
     ret = [] # Initialisation of a list which will hold all the file data that is being imported
     for file in os.listdir(loc): # Loop through every file in the specified folder
@@ -304,7 +311,7 @@ def paint_faulty_locations(img, expected_ring): # Takes in an image and a mask
     return img
 
 # Takes in the title of the file, the actual image, labels, centroid coordinates, boinding_box coordinates, the processing time, and the totals (which hold the current count of failed and passed origns) and outputs them as an image to the screen
-def display_image(title, img, labels, centroid, bounding_box, start, totals):
+def perform_detection(title, img, labels, centroid, bounding_box, start, totals):
     updated_img = img.copy() # Create a copy of the original image (to "paint" on a copy rather than altering the original)
     updated_img = paint_labeled_components(updated_img, labels) # Paints the labels of the components onto the image (inverts the foreground and background colours in the process)
     radius = get_radius(updated_img, centroid) # Calculates the 2 radius values (inner edge and outer edge of the oring)
@@ -328,7 +335,7 @@ def display_image(title, img, labels, centroid, bounding_box, start, totals):
         totals[0] += 1 # Increment the True total counter
 
     updated_img = paint_bounding_box(updated_img, bounding_box, result[0]) # Paint the bounding box onto the image
-    updated_img = cv.putText(updated_img, "Processing Time (s): " + str(end - start), (5, 10), cv.FONT_HERSHEY_SIMPLEX, 0.3, (255, 255, 255), 1, cv.LINE_AA) # Paint the processing time text onto the image
+    updated_img = cv.putText(updated_img, "Processing Time (s): " + str(end - start), (5, 10), cv.FONT_HERSHEY_COMPLEX, 0.3, (255, 255, 255), 1, cv.LINE_AA) # Paint the processing time text onto the image
 
     updated_img = cv.putText(updated_img, res, (centroid[1] - 15, centroid[0] + 5), cv.FONT_HERSHEY_SIMPLEX, 0.5, colour, 1, cv.LINE_AA) # Print the resulting text (FAIL or PASS) in the center of the O ring
     updated_img = cv.putText(updated_img, "Totals: ", (5, 215), cv.FONT_HERSHEY_SIMPLEX, 0.3, (255, 255, 255), 1, cv.LINE_AA) # Print the title for extra statistics onto the image
@@ -336,13 +343,10 @@ def display_image(title, img, labels, centroid, bounding_box, start, totals):
     updated_img = cv.putText(updated_img, "Fail {}".format(totals[1]), (80, 215), cv.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 255), 1, cv.LINE_AA) # Print the total number of Failing O rings processed onto the image
     updated_img = cv.putText(updated_img, title.split('.')[0], (167, 215), cv.FONT_HERSHEY_SIMPLEX, 0.4, (128, 128, 128), 1, cv.LINE_AA) # Print the file name (O ring number) onto the image
 
-    cv.imshow('Preview: ' + title, updated_img) # Show the image to the user
+    cv.imshow(title, updated_img) # Show the image to the user
     cv.waitKey(0) # Wait for key input from the user before proceeding
     cv.destroyAllWindows() # Destroy all the windows open before moving on
     return totals
-
-location = './Orings' # Specify the folder that contains all the images, the program will search through it
-file_ext = '.jpg' # Specify the file type for the program to read in
 
 images = read_images(location, file_ext) # Call the method to read in all the images, store them in a list
 
@@ -362,11 +366,12 @@ for img in images: # Loop through the list of images, and process them one by on
     img_labels = remove_smallest_areas(img_labels) # Use the component labels to remove the components with the smallest areas
     centroid = get_centroid(img_labels) # Calculate the centroid for the image
     bounding_box = get_bounding_box(img_labels) # Calculate the bounding box coordinates for the image (using the labels list to only count the main Oring area)
-    totals = display_image(img[0].split('/')[-1], img_thr, img_labels, centroid, bounding_box, start, totals) # Call the method to display the image, and return the new totals list
+    totals = perform_detection(img[0].split('/')[-1], img_thr, img_labels, centroid, bounding_box, start, totals) # Call the method to display the image, and return the new totals list
 
 # Print the processing statistics to the console
 print("=== Processing Statistics ===")
 print("Processing Time:\t{} seconds".format(totals[2]))
 print("Total Orings:\t\t{}".format(len(images)))
+print("Avg. Processing Time:\t{}".format(totals[2] / len(images)))
 print("Passing Orings:\t\t{}".format(totals[0]))
 print("Failing Orings:\t\t{}".format(totals[1]))
